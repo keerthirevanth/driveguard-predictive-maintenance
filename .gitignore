@@ -1,0 +1,35 @@
+# data (tracked via DVC, not git) - keep folders, ignore contents
+data/raw/*
+data/interim/*
+data/processed/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+*.csv
+*.parquet
+*.zip
+
+# mlflow / experiments
+mlruns/
+mlartifacts/
+*.db
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+
+# env / secrets
+.env
+
+# os
+.DS_Store
+Thumbs.db
+
+# keep folder structure
+!**/.gitkeep

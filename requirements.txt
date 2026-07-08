@@ -1,0 +1,45 @@
+# --- core data ---
+numpy
+pandas
+polars
+pyarrow            # Parquet
+scipy
+
+# --- ml ---
+scikit-learn
+lightgbm
+xgboost
+catboost
+imbalanced-learn   # SMOTE/ADASYN
+optuna             # hyperparameter search
+
+# --- deep learning / sequence ---
+torch
+pytorch-tabnet
+
+# --- survival / RUL ---
+lifelines
+scikit-survival
+
+# --- explainability ---
+shap
+
+# --- mlops ---
+mlflow
+dvc
+evidently
+fastapi
+uvicorn[standard]
+pydantic
+prefect            # orchestration (Airflow optional via docker-compose)
+
+# --- dashboard ---
+streamlit
+plotly
+
+# --- dev ---
+pytest
+ruff
+black
+python-dotenv
+pyyaml

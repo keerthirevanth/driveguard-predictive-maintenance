@@ -1,0 +1,49 @@
+# DriveGuard configuration. Everything here is a KNOB to experiment with — not a fixed decision.
+
+data:
+  source: backblaze                 # backblaze | kaggle
+  quarters: ["2024-Q3", "2024-Q4", "2025-Q1", "2025-Q2"]  # scope: 4-6 recent quarters
+  raw_dir: data/raw
+  interim_dir: data/interim
+  processed_dir: data/processed
+  # undersample the massively-dominant healthy drive-days at ingest (ratio kept:failures)
+  healthy_downsample_ratio: 50
+
+labels:
+  # classification horizon(s) in days — benchmark each
+  horizons_days: [7, 15, 30]
+
+split:
+  strategy: time                    # time-based split ONLY (avoid leakage)
+  train_quarters: ["2024-Q3", "2024-Q4"]
+  val_quarters:   ["2025-Q1"]
+  test_quarters:  ["2025-Q2"]
+
+features:
+  smart_big5: [smart_5_raw, smart_187_raw, smart_188_raw, smart_197_raw, smart_198_raw]
+  rolling_windows_days: [7, 14, 30]
+  rolling_aggs: [mean, std, slope]
+  feature_sets_to_compare: [big5, full, auto_selected]
+
+imbalance:
+  strategies_to_compare: [class_weight, focal_loss, smote, adasyn, undersample, threshold_tuning]
+
+models:
+  classification: [logreg, lightgbm, xgboost, catboost, random_forest, tabnet]
+  sequence:       [lstm, gru, cnn1d, temporal_transformer]
+  survival:       [cox_ph, random_survival_forest, deepsurv, weibull_aft]
+
+hpo:
+  framework: optuna
+  n_trials: 50
+  timeout_minutes: 120
+
+evaluation:
+  primary_metric: pr_auc            # imbalance-appropriate
+  secondary: [recall_at_low_fpr, fbeta, brier, concordance_index, rul_mae]
+  fbeta_beta: 2.0                   # recall-weighted (missed failure costs more)
+
+mlops:
+  mlflow_tracking_uri: file:./mlruns
+  drift_pr_auc_drop_threshold: 0.05  # retrain trigger
+  monitoring_tool: evidently

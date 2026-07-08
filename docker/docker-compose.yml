@@ -1,0 +1,31 @@
+# Local full-stack: serving API + MLflow tracking + dashboard.
+# Airflow can be added here later as an alternative to Prefect.
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../mlruns:/app/mlruns
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri /mlruns
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../mlruns:/mlruns
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    command: streamlit run dashboard/app.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../mlruns:/app/mlruns
