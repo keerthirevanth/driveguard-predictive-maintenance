@@ -1,0 +1,124 @@
+{
+  "total_drive_days": 113797771,
+  "unique_drives": 342344,
+  "failed_drives": 4409,
+  "drive_level_failure_pct": 1.288,
+  "drive_day_failure_pct": 0.00387,
+  "median_lifetime_days_all": 365,
+  "median_lifetime_days_failed": 180,
+  "label_balance_by_horizon": {
+    "7": {
+      "positives": 32436,
+      "negatives": 111405834,
+      "censored_dropped": 2359501,
+      "positive_rate_pct": 0.02911,
+      "imbalance_neg_per_pos": 3434.6
+    },
+    "15": {
+      "positives": 65100,
+      "negatives": 108692187,
+      "censored_dropped": 5040484,
+      "positive_rate_pct": 0.05986,
+      "imbalance_neg_per_pos": 1669.6
+    },
+    "30": {
+      "positives": 125263,
+      "negatives": 103662736,
+      "censored_dropped": 10009772,
+      "positive_rate_pct": 0.12069,
+      "imbalance_neg_per_pos": 827.6
+    }
+  },
+  "top_models_by_failure_rate": [
+    {
+      "model": "ST12000NM0007",
+      "drives": 1062,
+      "failures": 69,
+      "failure_rate_pct": 6.497175141242938
+    },
+    {
+      "model": "ST14000NM0138",
+      "drives": 1344,
+      "failures": 78,
+      "failure_rate_pct": 5.803571428571429
+    },
+    {
+      "model": "ST10000NM0086",
+      "drives": 1060,
+      "failures": 59,
+      "failure_rate_pct": 5.566037735849057
+    },
+    {
+      "model": "TOSHIBA MG08ACA16TEY",
+      "drives": 5210,
+      "failures": 281,
+      "failure_rate_pct": 5.393474088291747
+    },
+    {
+      "model": "HGST HUH721212ALN604",
+      "drives": 10334,
+      "failures": 450,
+      "failure_rate_pct": 4.354557770466421
+    },
+    {
+      "model": "HGST HUH721212ALE604",
+      "drives": 13750,
+      "failures": 378,
+      "failure_rate_pct": 2.749090909090909
+    },
+    {
+      "model": "ST12000NM0008",
+      "drives": 19262,
+      "failures": 484,
+      "failure_rate_pct": 2.512719343785692
+    },
+    {
+      "model": "ST8000NM0055",
+      "drives": 13597,
+      "failures": 295,
+      "failure_rate_pct": 2.1695962344634845
+    },
+    {
+      "model": "WDC WUH721816ALE6L0",
+      "drives": 3034,
+      "failures": 52,
+      "failure_rate_pct": 1.7139090309822018
+    },
+    {
+      "model": "ST8000DM002",
+      "drives": 9134,
+      "failures": 153,
+      "failure_rate_pct": 1.6750602145828772
+    },
+    {
+      "model": "HGST HUH728080ALE600",
+      "drives": 1091,
+      "failures": 18,
+      "failure_rate_pct": 1.6498625114573786
+    },
+    {
+      "model": "ST14000NM001G",
+      "drives": 10716,
+      "failures": 155,
+      "failure_rate_pct": 1.446435237028742
+    },
+    {
+      "model": "TOSHIBA MG08ACA16TE",
+      "drives": 6249,
+      "failures": 86,
+      "failure_rate_pct": 1.376220195231237
+    },
+    {
+      "model": "TOSHIBA MG07ACA14TA",
+      "drives": 37813,
+      "failures": 462,
+      "failure_rate_pct": 1.221802025758337
+    },
+    {
+      "model": "ST24000NM002H",
+      "drives": 7281,
+      "failures": 81,
+      "failure_rate_pct": 1.1124845488257107
+    }
+  ]
+}

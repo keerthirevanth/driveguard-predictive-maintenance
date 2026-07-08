@@ -1,8 +1,8 @@
-# DriveGuard configuration. Everything here is a KNOB to experiment with — not a fixed decision.
+# DriveGuard configuration. Everything here is a KNOB to experiment with - not a fixed decision.
 
 data:
   source: backblaze                 # backblaze | kaggle
-  quarters: ["2024-Q3", "2024-Q4", "2025-Q1", "2025-Q2"]  # scope: 4-6 recent quarters
+  quarters: ["2024-Q4", "2025-Q1", "2025-Q2", "2025-Q3"]  # scope: 4 newest quarters
   raw_dir: data/raw
   interim_dir: data/interim
   processed_dir: data/processed
@@ -10,14 +10,14 @@ data:
   healthy_downsample_ratio: 50
 
 labels:
-  # classification horizon(s) in days — benchmark each
+  # classification horizon(s) in days - benchmark each
   horizons_days: [7, 15, 30]
 
 split:
   strategy: time                    # time-based split ONLY (avoid leakage)
-  train_quarters: ["2024-Q3", "2024-Q4"]
-  val_quarters:   ["2025-Q1"]
-  test_quarters:  ["2025-Q2"]
+  train_quarters: ["2024-Q4", "2025-Q1"]
+  val_quarters:   ["2025-Q2"]
+  test_quarters:  ["2025-Q3"]
 
 features:
   smart_big5: [smart_5_raw, smart_187_raw, smart_188_raw, smart_197_raw, smart_198_raw]
