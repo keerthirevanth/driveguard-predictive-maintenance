@@ -14,6 +14,9 @@ mlruns/
 mlartifacts/
 *.db
 
+# trained model artifacts (belong in registry/DVC, not git)
+models_store/
+
 # python
 __pycache__/
 *.py[cod]
