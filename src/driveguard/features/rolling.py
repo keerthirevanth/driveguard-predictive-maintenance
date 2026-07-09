@@ -54,6 +54,12 @@ def _split_lazy(interim_glob: str, summary_path: str, quarters: list[str], n: in
         .filter(pl.col("date").is_between(lookback, hi_d))  # quarter + look-back only
         .with_columns([pl.col(c).cast(pl.Float32) for c in SMART_BIG5])
         .sort("serial_number", "date")
+        # rolling_*_by cannot handle nulls; fill within each drive (carry last value
+        # forward, then 0 for any leading gap) so the trajectory is preserved.
+        .with_columns([
+            pl.col(c).forward_fill().over("serial_number").fill_null(0).alias(c)
+            for c in SMART_BIG5
+        ])
         .with_columns(_rolling_exprs(SMART_BIG5))
         .with_columns([
             (pl.col(c) - pl.col(f"{c}_rmean_30")).cast(pl.Float32).alias(f"{c}_dev30")
