@@ -94,24 +94,26 @@ class _WeibullAFT:
 
 
 class _RSF:
-    def fit(self, X, event, dur, feats):
+    # Random Survival Forest is expensive; keep it tractable: cap the training subsample,
+    # use fewer/leaner trees. RUL (predict_survival_function) is far too slow at this scale,
+    # so RSF contributes the risk-based C-index only (Cox/Weibull provide RUL).
+    def fit(self, X, event, dur, feats, max_rows=40_000):
         from sksurv.ensemble import RandomSurvivalForest
         from sksurv.util import Surv
-        y = Surv.from_arrays(event, dur)
-        self.f = RandomSurvivalForest(n_estimators=200, min_samples_leaf=50,
+        if len(X) > max_rows:
+            rng = np.random.default_rng(42)
+            idx = rng.choice(len(X), max_rows, replace=False)
+            X, event, dur = X[idx], event[idx], dur[idx]
+        self.f = RandomSurvivalForest(n_estimators=100, min_samples_leaf=100,
                                       max_features="sqrt", n_jobs=-1, random_state=42)
-        self.f.fit(X, y)
+        self.f.fit(X, Surv.from_arrays(event, dur))
         return self
 
     def risk(self, X):
-        return self.f.predict(X)  # risk score
+        return self.f.predict(X)  # risk score (higher = fails sooner)
 
     def pred_time(self, X):
-        # expected time = integral of survival function over the time grid
-        surv = self.f.predict_survival_function(X, return_array=True)
-        t = self.f.unique_times_
-        dt = np.diff(np.concatenate([[0.0], t]))
-        return (surv * dt).sum(axis=1)
+        return None  # survival-function RUL is prohibitively slow for RSF; skip
 
 
 FACTORY = {"cox_ph": _CoxPH, "weibull_aft": _WeibullAFT, "random_survival_forest": _RSF}
