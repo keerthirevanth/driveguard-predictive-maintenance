@@ -42,32 +42,38 @@ def build_sequences(interim_glob: str, summary_path: str, quarters: list[str],
         cen = cen.sample(n=cap_censored_drives, seed=seed)
     keep = pl.concat([ev, cen])
     print(f"  [seq] drives: {ev.height} event + {cen.height} censored", flush=True)
-    keep_set = set(keep["serial_number"].to_list())
     ends = dict(zip(keep["serial_number"], keep["last_date"]))
     evmap = dict(zip(keep["serial_number"], keep["event"]))
 
     lookback = (pl.lit(lo).str.to_date() - pl.duration(days=L))
+    keep_lz = keep.select("serial_number").lazy()
+    # inner-join to prune to the kept drives DURING the scan (streaming, low memory);
+    # sort + forward-fill are done per-drive in numpy below, not over the whole frame.
     df = (
         pl.scan_parquet(interim_glob)
         .select(["date", "serial_number", *SMART_BIG5])
-        .filter(pl.col("serial_number").is_in(list(keep_set)))
         .filter(pl.col("date").is_between(lookback, pl.lit(hi).str.to_date()))
+        .join(keep_lz, on="serial_number", how="inner")
         .with_columns([pl.col(c).cast(pl.Float32) for c in SMART_BIG5])
-        .sort("serial_number", "date")
-        .with_columns([
-            pl.col(c).forward_fill().over("serial_number").fill_null(0).alias(c)
-            for c in SMART_BIG5
-        ])
         .collect(engine="streaming")
     )
     print(f"  [seq] collected {df.height} drive-days; building windows...", flush=True)
 
+    def _ffill(a):  # forward-fill NaNs down time axis, then 0 for leading gaps
+        m = np.isnan(a)
+        idx = np.where(~m, np.arange(a.shape[0])[:, None], 0)
+        np.maximum.accumulate(idx, axis=0, out=idx)
+        a = np.take_along_axis(a, idx, axis=0)
+        return np.nan_to_num(a, nan=0.0)
+
     X, dur, event = [], [], []
     F = len(SMART_BIG5)
-    for serial, g in df.group_by("serial_number", maintain_order=True):
+    for serial, g in df.group_by("serial_number"):
         serial = serial[0] if isinstance(serial, tuple) else serial
         dates = g["date"].to_numpy()
         feats = g.select(SMART_BIG5).to_numpy().astype(np.float32)  # [days, F]
+        order = np.argsort(dates)                 # per-drive sort (cheap)
+        dates, feats = dates[order], _ffill(feats[order])
         last = np.datetime64(ends[serial])
         ev_flag = int(evmap[serial])
         # anchor positions = days inside the split window
