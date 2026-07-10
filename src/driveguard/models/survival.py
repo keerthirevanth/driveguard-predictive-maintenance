@@ -130,7 +130,49 @@ class _RSF:
         return None  # survival-function RUL is prohibitively slow for RSF; skip
 
 
-FACTORY = {"cox_ph": _CoxPH, "weibull_aft": _WeibullAFT, "random_survival_forest": _RSF}
+class _DeepSurv:
+    # Neural Cox (DeepSurv): an MLP trained with the Cox partial-likelihood loss.
+    # Full-batch loss uses logcumsumexp over durations-descending for the risk sets.
+    def fit(self, X, event, dur, feats, epochs=250, lr=1e-3, seed=42):
+        import torch
+        import torch.nn as nn
+        torch.manual_seed(seed)
+        self.dev = "cuda" if torch.cuda.is_available() else "cpu"
+        self.mu = X.mean(0)
+        self.sd = X.std(0) + 1e-6
+        Xs = ((X - self.mu) / self.sd).astype(np.float32)
+        self.net = nn.Sequential(
+            nn.Linear(X.shape[1], 64), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(64, 32), nn.ReLU(), nn.Linear(32, 1)).to(self.dev)
+        Xt = torch.tensor(Xs, device=self.dev)
+        dt = torch.tensor(dur.astype(np.float32), device=self.dev)
+        et = torch.tensor(event.astype(np.float32), device=self.dev)
+        order = torch.argsort(dt, descending=True)  # risk set = prefix in this order
+        Xt, et = Xt[order], et[order]
+        opt = torch.optim.Adam(self.net.parameters(), lr=lr, weight_decay=1e-4)
+        self.net.train()
+        for _ in range(epochs):
+            opt.zero_grad()
+            risk = self.net(Xt).squeeze(-1)
+            ll = (risk - torch.logcumsumexp(risk, dim=0)) * et
+            loss = -ll.sum() / et.sum().clamp(min=1)
+            loss.backward()
+            opt.step()
+        return self
+
+    def risk(self, X):
+        import torch
+        Xs = ((X - self.mu) / self.sd).astype(np.float32)
+        self.net.eval()
+        with torch.no_grad():
+            return self.net(torch.tensor(Xs, device=self.dev)).squeeze(-1).cpu().numpy()
+
+    def pred_time(self, X):
+        return None  # DeepSurv gives relative risk, not absolute time (no baseline hazard)
+
+
+FACTORY = {"cox_ph": _CoxPH, "weibull_aft": _WeibullAFT,
+           "random_survival_forest": _RSF, "deepsurv": _DeepSurv}
 
 
 def run_survival(feature_dir: str | Path, models: list[str],

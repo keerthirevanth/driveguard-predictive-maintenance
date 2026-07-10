@@ -159,7 +159,11 @@ FACTORY = {
 
 
 def run_bakeoff(feature_dir: str | Path, feature_set: str, horizon: int,
-                models: list[str], cfg: dict, mlflow_uri: str | None = None) -> list[dict]:
+                models: list[str], cfg: dict, mlflow_uri: str | None = None,
+                model_params: dict | None = None) -> list[dict]:
+    """model_params: optional {model_name: params_dict} to use tuned configs (e.g. the
+    Optuna-tuned LightGBM) instead of defaults."""
+    model_params = model_params or {}
     feature_dir = Path(feature_dir)
     feats = _feature_cols(feature_dir / "train.parquet")
     cat_idx = feats.index(CAT)
@@ -183,7 +187,7 @@ def run_bakeoff(feature_dir: str | Path, feature_set: str, horizon: int,
     for name in models:
         t0 = time.time()
         try:
-            est = FACTORY[name](Xtr, ytr, spw, cat_idx)
+            est = FACTORY[name](Xtr, ytr, spw, cat_idx, model_params.get(name))
             res = {"model": name, "feature_set": feature_set, "horizon": horizon,
                    "train_rows": int(len(ytr)), "fit_sec": round(time.time() - t0, 1)}
             for split in ["val", "test"]:
