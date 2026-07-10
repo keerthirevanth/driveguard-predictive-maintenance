@@ -123,11 +123,11 @@ def _fit_random_forest(Xtr, ytr, spw, cat_idx, params=None):
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.impute import SimpleImputer
     from sklearn.pipeline import make_pipeline
-    m = make_pipeline(
-        SimpleImputer(strategy="median"),
-        RandomForestClassifier(n_estimators=300, max_depth=None, min_samples_leaf=50,
-                               class_weight="balanced_subsample", n_jobs=-1, random_state=42),
-    )
+    p = dict(n_estimators=300, max_depth=None, min_samples_leaf=50,
+             max_features="sqrt", class_weight="balanced_subsample",
+             n_jobs=-1, random_state=42)
+    p.update(params or {})
+    m = make_pipeline(SimpleImputer(strategy="median"), RandomForestClassifier(**p))
     m.fit(Xtr, ytr)
     return m
 
