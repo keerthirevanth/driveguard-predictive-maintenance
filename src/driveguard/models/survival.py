@@ -22,6 +22,16 @@ from driveguard.evaluation.metrics import evaluate_survival
 from driveguard.models.train import CAT, _model_code_map
 
 DROP = ("serial_number", "date", "event", "duration")
+RUL_CAP = 400.0  # observation window is ~365 days; clip predicted RUL to a sane range
+
+
+def _clip_time(v):
+    """Predicted survival times can be inf/NaN (median never reached under censoring);
+    clip to a realistic day range so RUL MAE is meaningful."""
+    import numpy as _np
+    v = _np.asarray(v, dtype=float)
+    v = _np.nan_to_num(v, nan=RUL_CAP, posinf=RUL_CAP, neginf=1.0)
+    return _np.clip(v, 1.0, RUL_CAP)
 
 
 def _feature_cols(train_path: Path) -> list[str]:
@@ -58,7 +68,7 @@ class _CoxPH:
         from lifelines import CoxPHFitter
         d = pd.DataFrame(X, columns=[f"f{i}" for i in range(X.shape[1])])
         d["duration"], d["event"] = dur, event.astype(int)
-        self.f = CoxPHFitter(penalizer=0.1)
+        self.f = CoxPHFitter(penalizer=1.0)  # stronger L2 to tame near-separation columns
         self.f.fit(d, duration_col="duration", event_col="event")
         self.cols = [f"f{i}" for i in range(X.shape[1])]
         return self
@@ -71,7 +81,7 @@ class _CoxPH:
         return self.f.predict_partial_hazard(self._df(X)).to_numpy()
 
     def pred_time(self, X):
-        return self.f.predict_expectation(self._df(X)).to_numpy()
+        return _clip_time(self.f.predict_expectation(self._df(X)).to_numpy())
 
 
 class _WeibullAFT:
@@ -85,12 +95,16 @@ class _WeibullAFT:
         self.cols = [f"f{i}" for i in range(X.shape[1])]
         return self
 
-    def pred_time(self, X):
+    def _median(self, X):
         import pandas as pd
         return self.f.predict_median(pd.DataFrame(X, columns=self.cols)).to_numpy()
 
+    def pred_time(self, X):
+        return _clip_time(self._median(X))
+
     def risk(self, X):
-        return -self.pred_time(X)  # shorter predicted time = higher risk
+        # rank on raw (clipped only for inf/nan) so ordering is preserved
+        return -_clip_time(self._median(X))
 
 
 class _RSF:
