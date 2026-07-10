@@ -84,13 +84,26 @@ def _fit_xgboost(Xtr, ytr, spw, cat_idx, params=None):
 
 
 def _fit_catboost(Xtr, ytr, spw, cat_idx, params=None):
+    # CatBoost rejects float-valued categorical columns, so pass the model column as a
+    # string via a DataFrame (our X is all-float32). Numeric NaNs are handled natively.
+    import pandas as pd
     from catboost import CatBoostClassifier
+
+    def to_df(X):
+        df = pd.DataFrame(X)
+        df[cat_idx] = pd.Series(X[:, cat_idx]).fillna(-1).astype("int64").astype(str)
+        return df
+
     p = dict(iterations=800, learning_rate=0.05, depth=8, l2_leaf_reg=3.0,
              scale_pos_weight=spw, random_seed=42, verbose=0)
     p.update(params or {})
     m = CatBoostClassifier(**p)
-    m.fit(Xtr, ytr, cat_features=[cat_idx])
-    return m
+    m.fit(to_df(Xtr), ytr, cat_features=[cat_idx])
+
+    class _Wrap:
+        def predict_proba(self, X):
+            return m.predict_proba(to_df(X))
+    return _Wrap()
 
 
 def _fit_sklearn_linear(Xtr, ytr, spw, cat_idx, params=None):
