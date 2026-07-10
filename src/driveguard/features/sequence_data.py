@@ -19,9 +19,10 @@ from driveguard.features.build_features import SMART_BIG5, _QUARTER_RANGE
 
 
 def build_sequences(interim_glob: str, summary_path: str, quarters: list[str],
-                    L: int = 30, cap_censored_drives: int = 15_000,
-                    cap_anchors: int = 150_000, event_anchors_per_drive: int = 90,
-                    censored_anchors_per_drive: int = 6, seed: int = 42):
+                    L: int = 30, cap_event_drives: int = 5_000,
+                    cap_censored_drives: int = 8_000,
+                    cap_anchors: int = 120_000, event_anchors_per_drive: int = 30,
+                    censored_anchors_per_drive: int = 4, seed: int = 42):
     lo = min(_QUARTER_RANGE[q][0] for q in quarters)
     hi = max(_QUARTER_RANGE[q][1] for q in quarters)
     lo_d = np.datetime64(lo)
@@ -35,9 +36,12 @@ def build_sequences(interim_glob: str, summary_path: str, quarters: list[str],
         & (pl.col("last_date") >= pl.lit(lo).str.to_date()))
     ev = active.filter(pl.col("event") == 1)
     cen = active.filter(pl.col("event") == 0)
+    if ev.height > cap_event_drives:
+        ev = ev.sample(n=cap_event_drives, seed=seed)
     if cen.height > cap_censored_drives:
         cen = cen.sample(n=cap_censored_drives, seed=seed)
     keep = pl.concat([ev, cen])
+    print(f"  [seq] drives: {ev.height} event + {cen.height} censored", flush=True)
     keep_set = set(keep["serial_number"].to_list())
     ends = dict(zip(keep["serial_number"], keep["last_date"]))
     evmap = dict(zip(keep["serial_number"], keep["event"]))
@@ -56,6 +60,7 @@ def build_sequences(interim_glob: str, summary_path: str, quarters: list[str],
         ])
         .collect(engine="streaming")
     )
+    print(f"  [seq] collected {df.height} drive-days; building windows...", flush=True)
 
     X, dur, event = [], [], []
     F = len(SMART_BIG5)
