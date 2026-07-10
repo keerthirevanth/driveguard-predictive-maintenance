@@ -1,0 +1,35 @@
+{
+  "_note": "Optuna-tuned hyperparameters on rolling features, N=30 (Milestone 3). Winner = lightgbm (test PR-AUC 0.164). See reports/m3_leaderboard.md.",
+  "feature_set": "rolling",
+  "horizon": 30,
+  "winner": "lightgbm",
+  "params": {
+    "lightgbm": {
+      "num_leaves": 49,
+      "learning_rate": 0.024343566918508024,
+      "n_estimators": 420,
+      "subsample": 0.8197198363098915,
+      "colsample_bytree": 0.6525550792536166,
+      "reg_lambda": 0.9524327786881235,
+      "min_child_samples": 184
+    },
+    "random_forest": {
+      "n_estimators": 353,
+      "max_depth": 20,
+      "min_samples_leaf": 185,
+      "max_features": 0.3
+    },
+    "catboost": {
+      "depth": 6,
+      "learning_rate": 0.025043908574120786,
+      "iterations": 711,
+      "l2_leaf_reg": 4.961372443656412,
+      "task_type": "GPU"
+    }
+  },
+  "test_metrics": {
+    "lightgbm": {"pr_auc": 0.1638, "roc_auc": 0.869, "recall_at_1pct_fpr": 0.496},
+    "random_forest": {"pr_auc": 0.1476, "roc_auc": 0.881, "recall_at_1pct_fpr": 0.497},
+    "catboost": {"pr_auc": 0.1395, "roc_auc": 0.886, "recall_at_1pct_fpr": 0.491}
+  }
+}
