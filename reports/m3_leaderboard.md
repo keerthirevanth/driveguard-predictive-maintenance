@@ -31,9 +31,23 @@ M2 baseline (LightGBM, big5): test PR-AUC 0.096.
   ROC/recall balance; lightgbm is 6-17x faster to fit.
 - TabNet underperformed GBDTs badly and was far slower - expected for tabular data.
 
-## Decision
-Carry the `rolling` feature set forward. No untuned winner among random_forest / lightgbm /
-catboost, so run Optuna HPO on all three (evidence-first) and pick by tuned test PR-AUC +
-recall@1%FPR, with fit/inference speed as a tiebreaker only. HPO objective on validation
-(2025-Q2); test (2025-Q3) stays the held-out judge. logreg/tabnet excluded from HPO
-(clearly non-competitive - that pruning is evidence-based).
+## Optuna HPO results (tuned on rolling features)
+Objective = PR-AUC on a validation subsample (all positives + capped negatives, so its base
+rate and absolute value are much higher than test - used only to rank configs). Final tuned
+configs scored on the full held-out test (2025-Q3, true base rate ~0.0016).
+
+| Model | val PR-AUC (subsample) | test PR-AUC | test ROC-AUC | recall @1% FPR |
+|---|---|---|---|---|
+| **lightgbm** | 0.4590 | **0.1638** | 0.869 | 0.496 |
+| random_forest | 0.4468 | 0.1476 | 0.881 | 0.497 |
+| catboost | 0.4412 | 0.1395 | 0.886 | 0.491 |
+
+- Tuning lifted LightGBM 0.1442 -> 0.1638 (+13.6%); RF barely moved; CatBoost dipped
+  slightly (val-optimum did not transfer - mild overfit to the val subsample).
+
+## Decision (final M3)
+WINNER: **LightGBM on rolling features, Optuna-tuned** - test PR-AUC 0.164 (~102x over base
+rate), recall 0.496 at a 1% false-alarm budget, and the fastest to train/serve. This is the
+production classifier carried into serving (M5). logreg/tabnet excluded from HPO
+(evidence-based, non-competitive). Progression: M2 baseline 0.096 -> rolling 0.144 ->
+tuned 0.164.
