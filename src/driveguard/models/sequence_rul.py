@@ -62,12 +62,12 @@ def _make_model(kind: str, n_features: int):
 
 
 def _censored_rul_loss(pred, dur, event):
-    import torch
     import torch.nn.functional as F
-    obs = F.smooth_l1_loss(pred[event], dur[event]) if event.any() else 0.0
-    cens = ~event
-    under = F.relu(dur[cens] - pred[cens]).mean() if cens.any() else 0.0
-    return obs + cens
+    cmask = ~event
+    obs = F.smooth_l1_loss(pred[event], dur[event]) if event.any() else pred.sum() * 0.0
+    # censored: penalise only if we predict a shorter life than the observed survival
+    under = F.relu(dur[cmask] - pred[cmask]).mean() if cmask.any() else pred.sum() * 0.0
+    return obs + under
 
 
 def _fit_eval(kind, Xtr, etr, dtr, Xte, ete, dte, rul_cap=200.0,
