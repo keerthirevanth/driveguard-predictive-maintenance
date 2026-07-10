@@ -73,3 +73,31 @@ def evaluate_classification(y_true, y_score, cfg: dict | None = None) -> dict:
         "recall_at_fpr_1pct": recall_at_fpr(y_true, y_score, 0.01),
     }
     return out
+
+
+def evaluate_survival(event, time, risk_score, pred_time=None) -> dict:
+    """Survival metrics.
+
+    - concordance index (C-index): does a higher risk_score correspond to a shorter
+      time-to-event, respecting right-censoring. 0.5 = random, 1.0 = perfect ranking.
+    - RUL MAE: on drives that actually failed (event==1), mean abs error between the
+      predicted remaining days (pred_time) and the true remaining days.
+    """
+    event = np.asarray(event).astype(bool)
+    time = np.asarray(time, dtype=float)
+    risk_score = np.asarray(risk_score, dtype=float)
+    out = {"n": int(len(event)), "events": int(event.sum())}
+    try:
+        from sksurv.metrics import concordance_index_censored
+        out["c_index"] = float(concordance_index_censored(event, time, risk_score)[0])
+    except Exception as e:  # fall back to a lifelines c-index if sksurv is unavailable
+        try:
+            from lifelines.utils import concordance_index
+            out["c_index"] = float(concordance_index(time, -risk_score, event))
+        except Exception:
+            out["c_index"], out["c_index_error"] = None, str(e)
+    if pred_time is not None and event.sum() > 0:
+        pred_time = np.asarray(pred_time, dtype=float)
+        out["rul_mae_days"] = float(np.mean(np.abs(pred_time[event] - time[event])))
+        out["rul_median_true_days"] = float(np.median(time[event]))
+    return out
