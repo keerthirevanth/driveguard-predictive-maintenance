@@ -8,10 +8,13 @@ on raw SMART day-sequences (L=30) with a censoring-aware RUL loss.
 ## Tabular models (survival_rolling test set)
 | Model | C-index | RUL MAE (days) | fit sec |
 |---|---|---|---|
-| random_survival_forest | 0.712 | n/a (risk score only) | 120.2 |
-| deepsurv (neural Cox) | 0.663 | n/a (risk score only) | 17.6 |
-| weibull_aft | 0.630 | 57.8 | 36.3 |
-| cox_ph | 0.455 | 123.4 | 17.9 |
+| random_survival_forest | 0.712 | 94.0 | 138.2 |
+| deepsurv (neural Cox) | 0.662 | n/a (risk score only) | 15.3 |
+| weibull_aft | 0.630 | 57.8 | 36.0 |
+| cox_ph | 0.455 | 123.4 | 17.1 |
+
+RSF RUL = area under its survival curve (expected days), now computed efficiently
+(row-batched, integer-day time grid) - runs in ~2 min, not the earlier multi-hour hang.
 
 ## Sequence models (sequence-window test set)
 | Model | C-index | RUL MAE (days) | fit sec |
@@ -23,9 +26,9 @@ on raw SMART day-sequences (L=30) with a censoring-aware RUL loss.
 ## Findings
 - Random Survival Forest is the best discriminator (C-index 0.712), ahead of DeepSurv,
   the sequence nets, and Weibull. Tree ensembles again dominate this tabular data.
-- Weibull AFT gives the best point RUL estimate (58-day MAE) and is the only strong model
-  that emits an absolute "days remaining" number (RSF/DeepSurv output relative risk only in
-  these configs; sequence models predict RUL but with larger error, 106-135 days).
+- Weibull AFT gives the best point RUL estimate (58-day MAE) - better than RSF's expected-
+  days (94), DeepSurv (risk only), and the sequence models (106-135 days). So RSF ranks best
+  but Weibull estimates days best - each model wins at a different task.
 - Cox PH underperforms (C-index below random) - its linear proportional-hazards assumption
   does not fit this data.
 
