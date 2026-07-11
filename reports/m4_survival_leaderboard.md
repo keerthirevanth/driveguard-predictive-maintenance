@@ -2,36 +2,41 @@
 
 Rolling features + survival targets (event, duration). Held-out test = 2025-Q3.
 Primary metric: concordance index (C-index; 0.5 = random). Secondary: RUL MAE (days) on
-drives that failed. Classical models on tabular rolling features; sequence models on raw
-SMART day-sequences (L=30) with a censoring-aware RUL loss.
+drives that failed. Classical/forest/DeepSurv on tabular rolling features; sequence models
+on raw SMART day-sequences (L=30) with a censoring-aware RUL loss.
 
-| Model | Type | C-index | RUL MAE (days) | fit sec |
-|---|---|---|---|---|
-| lstm | sequence (LSTM) | 0.686 | 135.1 | 62.7 |
-| cnn1d | sequence (1D-CNN) | 0.685 | 105.8 | 49.1 |
-| gru | sequence (GRU) | 0.634 | 125.7 | 60.4 |
-| weibull_aft | classical (AFT) | 0.630 | 57.8 | 51.5 |
-| cox_ph | classical (Cox PH) | 0.455 | 123.4 | 27.0 |
-| random_survival_forest | forest | (deferred - too slow to run to completion) | - | - |
+## Tabular models (survival_rolling test set)
+| Model | C-index | RUL MAE (days) | fit sec |
+|---|---|---|---|
+| random_survival_forest | 0.712 | n/a (risk score only) | 120.2 |
+| deepsurv (neural Cox) | 0.663 | n/a (risk score only) | 17.6 |
+| weibull_aft | 0.630 | 57.8 | 36.3 |
+| cox_ph | 0.455 | 123.4 | 17.9 |
+
+## Sequence models (sequence-window test set)
+| Model | C-index | RUL MAE (days) | fit sec |
+|---|---|---|---|
+| lstm | 0.686 | 135.1 | 62.7 |
+| cnn1d | 0.685 | 105.8 | 49.1 |
+| gru | 0.634 | 125.7 | 60.4 |
 
 ## Findings
-- Deep sequence models win on ranking: LSTM 0.686 and 1D-CNN 0.685 beat the best classical
-  model (Weibull 0.630) on C-index. The raw sequence carries signal the rolling summaries miss.
-- Weibull wins on point-RUL accuracy: MAE 58 days vs 106-135 for the deep models. So Weibull
-  estimates days-remaining more precisely while the nets rank risk better.
-- GRU trailed LSTM/CNN; Cox PH underperformed (C-index below random - linear PH assumption
-  does not fit this data).
+- Random Survival Forest is the best discriminator (C-index 0.712), ahead of DeepSurv,
+  the sequence nets, and Weibull. Tree ensembles again dominate this tabular data.
+- Weibull AFT gives the best point RUL estimate (58-day MAE) and is the only strong model
+  that emits an absolute "days remaining" number (RSF/DeepSurv output relative risk only in
+  these configs; sequence models predict RUL but with larger error, 106-135 days).
+- Cox PH underperforms (C-index below random) - its linear proportional-hazards assumption
+  does not fit this data.
 
-## Caveat
-Classical vs sequence RUL MAE were computed on different eval subsamples (separate
-notebooks), so the C-index (rank-based, primary) is the cleaner comparison; the MAE gap is
-directional, not exact.
+## Caveats
+- `RUL MAE = n/a` for RSF/DeepSurv: they produce a risk score, not a time; no MAE defined.
+- Tabular vs sequence C-index used different eval subsamples (separate notebooks), so the
+  cross-group comparison is directional; within each group it is clean.
 
-## Decision
-Best RUL model = **1D-CNN** (C-index 0.685 tied-best, best deep RUL MAE 105.8d, fastest to
-fit). LSTM edges C-index by 0.001 (noise). Carry the 1D-CNN as the RUL model into serving
-(M5), alongside the tuned LightGBM failure classifier from M3. Weibull noted as the best
-point-RUL estimator and a strong, simple classical baseline.
-
-## Optional extensions (not blocking)
-Random Survival Forest (fast config) and DeepSurv for completeness.
+## Decision (for serving, M5)
+- **Risk ranking**: Random Survival Forest is the strongest (0.712), but for a lightweight,
+  torch-free served RUL that emits an actual days-remaining number, use **Weibull AFT**
+  (58-day MAE, C-index 0.630, fast CPU). RSF is cited as the best pure risk-ranker.
+- Failure classifier stays the tuned LightGBM from M3 (PR-AUC 0.164).
+- So serving returns: failure risk (LightGBM) + RUL days (Weibull) + SHAP reasons.
