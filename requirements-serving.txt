@@ -1,0 +1,13 @@
+# Lean deps for the serving container (no torch/catboost/optuna training stack)
+numpy
+pandas
+polars
+pyarrow
+pyyaml
+scikit-learn
+lightgbm
+lifelines
+shap
+fastapi
+uvicorn[standard]
+pydantic

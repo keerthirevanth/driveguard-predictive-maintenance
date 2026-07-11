@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import pickle
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import numpy as np
@@ -24,7 +25,6 @@ from driveguard.features.build_features import SMART_BIG5
 from driveguard.features.rolling import WINDOWS, feature_columns
 
 STORE = PROJECT_ROOT / "models_store"
-app = FastAPI(title="DriveGuard", version="1.0.0")
 _state: dict = {}
 
 
@@ -42,10 +42,14 @@ def _load():
     _state.update(meta=meta, booster=booster, aft=aft, explainer=explainer)
 
 
-@app.on_event("startup")
-def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     if (STORE / "serving_meta.json").exists():
         _load()
+    yield
+
+
+app = FastAPI(title="DriveGuard", version="1.0.0", lifespan=lifespan)
 
 
 class DayReading(BaseModel):
