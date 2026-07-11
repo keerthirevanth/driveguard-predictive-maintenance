@@ -126,8 +126,19 @@ class _RSF:
     def risk(self, X):
         return self.f.predict(X)  # risk score (higher = fails sooner)
 
-    def pred_time(self, X):
-        return None  # survival-function RUL is prohibitively slow for RSF; skip
+    def pred_time(self, X, batch=20000):
+        # expected remaining days = area under the survival curve, integral S(t) dt.
+        # Durations are integer days (<=365 unique times) so this is cheap; batched over
+        # rows to bound memory and avoid the earlier full-matrix blow-up.
+        t = getattr(self.f, "event_times_", None)
+        if t is None:
+            t = self.f.unique_times_
+        dt = np.diff(np.concatenate([[0.0], np.asarray(t, dtype=float)]))
+        out = np.empty(len(X), dtype=np.float64)
+        for i in range(0, len(X), batch):
+            surv = self.f.predict_survival_function(X[i:i + batch], return_array=True)
+            out[i:i + batch] = (surv * dt).sum(axis=1)
+        return out
 
 
 class _DeepSurv:
