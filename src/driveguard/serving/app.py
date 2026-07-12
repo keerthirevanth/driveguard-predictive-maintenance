@@ -161,6 +161,23 @@ def predict(req: PredictRequest):
     else:
         alert = "ok"
 
+    # --- coherence check: the classifier (P fail in 30d) and the survival model (RUL)
+    # are independent and can disagree. We surface disagreement rather than hide it, so a
+    # "critical + long RUL" combo is explicitly flagged as low-confidence, not silently shown.
+    classifier_alarmed = alert in ("warning", "critical")
+    survival_alarmed = rul < 90
+    models_agree = classifier_alarmed == survival_alarmed
+    if models_agree:
+        confidence, note = "high", None
+    elif classifier_alarmed:
+        confidence = "low"
+        note = ("classifier flags elevated 30-day failure risk, but the survival model "
+                "estimates a long remaining life - models disagree, investigate before acting.")
+    else:
+        confidence = "low"
+        note = ("survival model estimates a short remaining life, but the classifier is calm "
+                "- models disagree, investigate before acting.")
+
     reasons = []
     if _state["explainer"] is not None:
         sv = _state["explainer"].shap_values(x)
@@ -172,9 +189,12 @@ def predict(req: PredictRequest):
                     "value": round(float(x[0, i]), 3)} for i in order]
 
     return {
-        "failure_probability_30d": round(prob, 5),   # calibrated
-        "raw_score": round(raw, 4),                  # uncalibrated ranking score
-        "alert_level": alert,
+        "failure_probability_30d": round(prob, 5),   # calibrated (headline number)
         "rul_days": round(rul, 1),
+        "alert_level": alert,
+        "confidence": confidence,                    # low when the two models disagree
+        "models_agree": models_agree,
+        "note": note,                                # explanation when they disagree
+        "raw_score": round(raw, 4),                  # uncalibrated ranking score
         "top_reasons": reasons,
     }
