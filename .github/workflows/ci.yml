@@ -16,8 +16,9 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          pip install ruff pytest
-          # full deps installed in a later job/stage; unit tests run on light deps
+          pip install ruff pytest pyyaml
+          # heavy deps (fastapi/lightgbm/torch) intentionally absent; those tests
+          # self-skip via pytest.importorskip
       - name: Lint
         run: ruff check src tests
       - name: Test

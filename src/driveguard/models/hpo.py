@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import numpy as np
 import polars as pl
 from sklearn.metrics import average_precision_score
 

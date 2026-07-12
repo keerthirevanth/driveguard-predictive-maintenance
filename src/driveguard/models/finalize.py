@@ -26,10 +26,11 @@ CAT = "model"
 HORIZON = 30
 
 
-def _training_frame(cfg: dict, root: Path, n_healthy: int = 10_000, seed: int = 42) -> pl.DataFrame:
+def _training_frame(cfg: dict, root: Path, quarters: list[str] | None = None,
+                    n_healthy: int = 10_000, seed: int = 42) -> pl.DataFrame:
     interim_glob = str(root / cfg["data"]["interim_dir"] / "*.parquet")
     summary_path = str(root / cfg["data"]["processed_dir"] / "drive_summary.parquet")
-    quarters = cfg["split"]["train_quarters"]
+    quarters = quarters or cfg["split"]["train_quarters"]
     lo = min(_QUARTER_RANGE[q][0] for q in quarters)
     hi = max(_QUARTER_RANGE[q][1] for q in quarters)
     lo_d, hi_d = pl.lit(lo).str.to_date(), pl.lit(hi).str.to_date()
@@ -100,15 +101,41 @@ def run(cfg: dict, root: Path) -> dict:
     aft.fit(surv.rename(columns={c: f"f{i}" for i, c in enumerate(feats)}),
             duration_col="duration", event_col="event")
 
+    # --- calibration + operating thresholds on the VALIDATION quarter (never test) ---
+    # scale_pos_weight inflates raw scores, so: (a) isotonic-calibrate them into honest
+    # probabilities, (b) derive alert thresholds from validation FPR budgets instead of
+    # a meaningless 0.5 cut.
+    from sklearn.isotonic import IsotonicRegression
+
+    from driveguard.evaluation.metrics import recall_at_fpr
+
+    vdf = _training_frame(cfg, root, quarters=cfg["split"]["val_quarters"], n_healthy=8_000)
+    venc = vdf.with_columns(pl.col(CAT).replace_strict(code_map, default=-1).cast(pl.Int32))
+    venc = venc.with_columns([pl.col(c).fill_null(0.0) for c in feats if c != CAT])
+    venc = venc.filter(pl.col("y").is_not_null())
+    Xv = venc.select(feats).to_numpy().astype(np.float32)
+    yv = venc["y"].to_numpy().astype(np.int8)
+    sv = clf.predict_proba(Xv)[:, 1]
+
+    iso = IsotonicRegression(out_of_bounds="clip").fit(sv, yv)
+    op = {"fpr_1pct": recall_at_fpr(yv, sv, 0.01),
+          "fpr_0.1pct": recall_at_fpr(yv, sv, 0.001)}
+
     store = root / "models_store"
     store.mkdir(exist_ok=True)
     clf.booster_.save_model(str(store / "classifier.txt"))
     with open(store / "rul_weibull.pkl", "wb") as f:
         pickle.dump(aft, f)
+    with open(store / "calibrator.pkl", "wb") as f:
+        pickle.dump(iso, f)
     meta = {"feature_cols": feats, "model_code_map": code_map, "cat_index": 0,
             "smart_cols": SMART_BIG5, "base_features": BASE_FEATURES, "horizon": HORIZON,
             "windows": [7, 14, 30], "n_train_rows": int(df.height),
-            "class_pos": int(yc.sum()), "class_neg": int((yc == 0).sum())}
+            "class_pos": int(yc.sum()), "class_neg": int((yc == 0).sum()),
+            "operating_points": op,
+            "calibration": "isotonic, fit on validation quarter "
+                           + ",".join(cfg["split"]["val_quarters"]),
+            "val_pos": int(yv.sum()), "val_neg": int((yv == 0).sum())}
     (store / "serving_meta.json").write_text(json.dumps(meta, indent=2))
     return meta
 

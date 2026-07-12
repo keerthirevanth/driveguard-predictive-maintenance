@@ -16,7 +16,6 @@ import numpy as np
 from sklearn.metrics import (
     average_precision_score,
     brier_score_loss,
-    fbeta_score,
     precision_recall_curve,
     roc_auc_score,
 )

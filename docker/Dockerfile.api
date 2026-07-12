@@ -6,7 +6,8 @@ RUN pip install --no-cache-dir -r requirements-serving.txt
 
 COPY src/ ./src/
 COPY config/ ./config/
-COPY models_store/ ./models_store/   # pre-built artifacts (python -m driveguard.models.finalize)
+# pre-built artifacts: run `python -m driveguard.models.finalize` before building
+COPY models_store/ ./models_store/
 ENV PYTHONPATH=/app/src
 
 EXPOSE 8000
