@@ -127,13 +127,10 @@ def health():
     return {"status": "ok", "model_loaded": "booster" in _state, "version": app.version}
 
 
-@app.post("/predict")
-def predict(req: PredictRequest):
-    if "booster" not in _state:
-        raise HTTPException(503, "models not loaded - run `python -m driveguard.models.finalize`")
+def score(x: np.ndarray) -> dict:
+    """Score one feature row -> the full prediction dict. Shared by the API and dashboard."""
+    x = x.reshape(1, -1)
     meta = _state["meta"]
-    x = _feature_vector(req, meta).reshape(1, -1)
-
     raw = float(_state["booster"].predict(x)[0])
     # scale_pos_weight inflates raw scores; the isotonic calibrator (fit on the
     # validation quarter) maps them to honest probabilities.
@@ -198,3 +195,10 @@ def predict(req: PredictRequest):
         "raw_score": round(raw, 4),                  # uncalibrated ranking score
         "top_reasons": reasons,
     }
+
+
+@app.post("/predict")
+def predict(req: PredictRequest):
+    if "booster" not in _state:
+        raise HTTPException(503, "models not loaded - run `python -m driveguard.models.finalize`")
+    return score(_feature_vector(req, _state["meta"]))
