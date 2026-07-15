@@ -39,3 +39,4 @@ Thumbs.db
 
 # generated drift reports
 reports/*.html
+/models_store
