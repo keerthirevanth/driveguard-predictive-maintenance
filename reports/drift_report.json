@@ -1,0 +1,78 @@
+{
+  "drift": {
+    "features": [
+      {
+        "feature": "capacity_gb",
+        "type": "numeric",
+        "psi": 0.0486,
+        "ks_stat": 0.0701,
+        "ks_pvalue": 1.0783961495678704e-128,
+        "drifted": false
+      },
+      {
+        "feature": "smart_5_raw",
+        "type": "numeric",
+        "psi": 0.0,
+        "ks_stat": 0.0043,
+        "ks_pvalue": 0.6366946157266792,
+        "drifted": false
+      },
+      {
+        "feature": "smart_187_raw",
+        "type": "numeric",
+        "psi": 0.0,
+        "ks_stat": 0.0012,
+        "ks_pvalue": 1.0,
+        "drifted": false
+      },
+      {
+        "feature": "smart_188_raw",
+        "type": "numeric",
+        "psi": 0.0,
+        "ks_stat": 0.0021,
+        "ks_pvalue": 0.9999999999446515,
+        "drifted": false
+      },
+      {
+        "feature": "smart_197_raw",
+        "type": "numeric",
+        "psi": 0.0,
+        "ks_stat": 0.0017,
+        "ks_pvalue": 0.9999959973214039,
+        "drifted": false
+      },
+      {
+        "feature": "smart_198_raw",
+        "type": "numeric",
+        "psi": 0.0,
+        "ks_stat": 0.001,
+        "ks_pvalue": 1.0,
+        "drifted": false
+      },
+      {
+        "feature": "model",
+        "type": "categorical",
+        "psi": 0.1124,
+        "new_categories": 5,
+        "drifted": true
+      }
+    ],
+    "n_features": 7,
+    "n_drifted": 1,
+    "drifted_share": 0.143,
+    "ref_rows": 60000,
+    "cur_rows": 60000,
+    "evidently_html": true
+  },
+  "decision": {
+    "retrain": false,
+    "reasons": []
+  },
+  "reference_quarters": [
+    "2024-Q4",
+    "2025-Q1"
+  ],
+  "current_quarters": [
+    "2025-Q3"
+  ]
+}

@@ -36,3 +36,6 @@ Thumbs.db
 
 # keep folder structure
 !**/.gitkeep
+
+# generated drift reports
+reports/*.html
