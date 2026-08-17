@@ -1,4 +1,4 @@
-# DriveGuard
+# Predictive Maintenance and Remaining-Life Estimation for Data-Center Drives
 
 [![CI](https://github.com/keerthirevanth/driveguard-predictive-maintenance/actions/workflows/ci.yml/badge.svg)](https://github.com/keerthirevanth/driveguard-predictive-maintenance/actions/workflows/ci.yml)
 
